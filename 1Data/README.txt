@@ -33,7 +33,7 @@ The file FreqMag.txt is used only to the code DesignEvent_Release_HybridAnalysis
 	- for weir it is the angle between the wing and the horizontal in degrees. A weir with Param = 90 is actually a slit
  -The sixth is the vertical clogging of the opening by boulders in meters at the beggining of the run
  -The seventh is the lateral clogging of the opening by boulders in meters at the beggining of the run
- -The heighth is a comment column to keep track of what are these openings, e.g., "crest", "spillway", "bottom slit"
+ -The heighth is a comment column to keep track of what are these openings, e.g., "crest", "Spillway", "bottom slit". It is necessary to have one called "Spillway" to plot the pbox when studying the max flow level.
  
  
 In RangeOfBoulders.txt, the column titles must be: Boulder_size_category_(m)	Lower_bound	Upper_bound	Best_estimate	Reference_Volume

@@ -68,11 +68,22 @@ TimeStep<-1 #(s) Should be an integer in seconds, so no less than 1 second
     #Interpolation of storage - elevation curve
     # StorageElevation<-read.csv("./1Data/ElevationStorageCurves.txt",sep="\t")
     storageElevationCurve<-data.frame(s=0,h=StorageElevation$Z)
+    
+    # Check that deposition slope is within the range of data
+    if(min(as.numeric(substr(names(StorageElevation[,-1]),2,6)))>SlopeDep/100)
+    {
+      print("Deposition slope selected below the minimum values of the elevation - storage capacity!
+            Used the minimum value of the table but consider adding the relevant data to the table!")
+    }
     #Interpolation for the slope of deposition selected
     for (i in (1:length(StorageElevation[,1])))
     {
       storageElevationCurve$s[i]<-approx(x=as.numeric(substr(names(StorageElevation[,-1]),2,6))
-                                       ,y=StorageElevation[i,-1],xout = SlopeDep/100)$y/10^3
+                                       ,y=StorageElevation[i,-1]
+                                       ,xout = SlopeDep/100
+                                       ,yleft=min(StorageElevation[i,-1])
+                                       ,yright=max(StorageElevation[i,-1])
+                                       )$y/10^3
     }
     rm(StorageElevation)
     
@@ -427,6 +438,10 @@ TimeStep<-1 #(s) Should be an integer in seconds, so no less than 1 second
     Vmax<-max(Reservoir$V,na.rm = T)
     Vfinal<-Reservoir$V[N.time.steps-1]
     
+    
+    #Record peak discharge at inlet
+    Qp.in<-max(Reservoir$Qi,na.rm=T)
+    
     #Extract maximum outlet discharge
     Qp.out<-max(Reservoir$Qo,na.rm=T)
     
@@ -486,7 +501,8 @@ TimeStep<-1 #(s) Should be an integer in seconds, so no less than 1 second
                           ,"Vmax"=Vmax*1000,"Vout"=Vout*1000,"Voutslit"=VoutSlit*1000
                           ,"Voutsplillway"=VoutSpillway*1000,"VoutCrest"=VoutCrest*1000
                           ,"Vfinal"=Vfinal*1000
-                          ,"Tover"=Tover,"Tover.spillway"=Tover.s)
+                          ,"Tover"=Tover,"Tover.spillway"=Tover.s
+                          ,"Qp.in"=Qp.in)
       RESULTS<-cbind(RESULTS
                      ,Boulder.z.final[1:(N.opening-1)] #only until N.opening -1 because
                      ,Boulder.w.final[1:(N.opening-1)])#the top opening is the crest
@@ -531,3 +547,16 @@ CheekyeBufferingModel_UncertainBoulderNumber_Vtot<-function(input)
 return(Rslt[5])
 }
 
+
+#Function exporting the maximum level at barrier 
+CheekyeBufferingModel_UncertainBoulderNumber_Z<-function(input)
+{Rslt<-as.numeric(CheekyeBufferingModel_UncertainBoulderNumber(input))
+return(Rslt[1])
+}
+
+
+#Function exporting the maximum discharge released
+CheekyeBufferingModel_UncertainBoulderNumber_Qp.out<-function(input)
+{Rslt<-as.numeric(CheekyeBufferingModel_UncertainBoulderNumber(input))
+return(Rslt[3])
+}

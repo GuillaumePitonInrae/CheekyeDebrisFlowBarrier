@@ -24,10 +24,10 @@ BoulderPassing<-function(Volume.Surge,Boulders)
       Volume.Surge<-Volume.Surge-sum(pi/6*N.Diam.boulder^3)
     }else{N.Diam.boulder<-NA}
     
-    if( (is.na(Boulder.list)  && !is.na(N.Diam.boulder)) )#Initialize the boulder list
+    if( (is.na(Boulder.list[1])  && !is.na(N.Diam.boulder[1])) )#Initialize the boulder list
     {Boulder.list<-N.Diam.boulder
     }else{
-      if( (!is.na(Boulder.list)  && !is.na(N.Diam.boulder)) ){ #Append the boulder list
+      if( (!is.na(Boulder.list[1])  && !is.na(N.Diam.boulder[1])) ){ #Append the boulder list
         Boulder.list<-c(Boulder.list,N.Diam.boulder)}
     }
   }

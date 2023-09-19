@@ -10,8 +10,6 @@ library(stringr) #To replace string
 library(HYRISK)#Package uncertainty propagation
 library(svDialogs) #Package for popup dialog windows
 library(ggplot2) #Plots
-library(gridBase)#Plots
-library(gridExtra)#Plots
 #start the clock for computation time recording
 # ptm <- proc.time()
 
@@ -284,10 +282,31 @@ while(Perform.Another.Simulation=="yes")
            , width = 16.5, height = 7,units="cm")
     
   }else{
+
+    #Select the parameter to study
+    AvailableParameters<-data.frame(N=(1:3)
+                                    ,N_Parameters=c("1   -Volume released"
+                                                  ,"2   -Peak discharge released"
+                                                  ,"3   -Maximum flow levels")
+                                    ,Parameters=c("VolumeReleased"
+                                                  ,"PeakDischargeReleased"
+                                                  ,"MaximumFlowLevels"))
     
+    ParameterToStudy<-as.numeric(dlg_input(message = c("Please write the number of the parameter you want to study:"
+                                      ,AvailableParameters$N_Parameters)
+                          ,default = AvailableParameters$N[1])$res)
+    #Check that the number is available in the list
+    while((ParameterToStudy %in% AvailableParameters$N)==FALSE)
+    {
+      
+      ParameterToStudy<-as.numeric(dlg_input(message = c("The number you wrote is not in the list, please write the number of the parameter you want to study:"
+                                                         ,AvailableParameters$Parameters)
+                                             ,default = AvailableParameters$N[1])$res)
+    }
+    #Define the monotony associated with the parameter
+    PositiveOutputMonotony<-if(ParameterToStudy %in% c(1,2)){TRUE}else{FALSE}
     
     # IMPERFECT DATA TO PROVIDE----
-    
     ninput<-6+length(Boulders[,1]) #Number of input parameters
     input<-vector(mode="list", length=ninput) # Initialisation#
     
@@ -405,7 +424,7 @@ while(Perform.Another.Simulation=="yes")
         name="Initial deposit [m]",
         type="fixed",
         param= InitialConditions$InitialDepositHeight_BestEstimate[1],
-        monoton = "decr"
+        monoton = if(PositiveOutputMonotony){"decr"}else{"incr"}
       )
     }else{
       #Otherwise, set it as possibility distribution (triangle)
@@ -418,7 +437,7 @@ while(Perform.Another.Simulation=="yes")
                                         InitialConditions$InitialDepositHeight_BestEstimate[1],
                                         InitialConditions$InitialDepositHeight_max[1],
                                         "Initial deposit"),
-        monoton = "decr"
+        monoton = if(PositiveOutputMonotony){"decr"}else{"incr"}
       )
     }
     
@@ -432,7 +451,7 @@ while(Perform.Another.Simulation=="yes")
         name="Initial jamming height [m]",
         type="fixed",
         param= InitialConditions$InitialJammingHeight_BestEstimate[1],
-        monoton = "decr"
+        monoton = if(PositiveOutputMonotony){"decr"}else{"incr"}
       )
     }else{
       #Otherwise, set it as possibility distribution (triangle)
@@ -445,7 +464,7 @@ while(Perform.Another.Simulation=="yes")
                                         InitialConditions$InitialJammingHeight_BestEstimate[1],
                                         InitialConditions$InitialJammingHeight_max[1],
                                         "Initial jamming height [m]"),
-        monoton = "decr")
+        monoton = if(PositiveOutputMonotony){"decr"}else{"incr"})
     }
     ###Boulders
     for(i in (1:length(Boulders[,1])))
@@ -460,7 +479,7 @@ while(Perform.Another.Simulation=="yes")
           name=paste0("#Boulders ",Boulders[i,1],"m"),
           type="fixed",
           param= Boulders$Best_estimate[i],
-          monoton = "decr"
+          monoton = if(PositiveOutputMonotony){"decr"}else{"incr"}
         )
       }else{
         #Otherwise, set it as possibility distribution (triangle)
@@ -473,7 +492,7 @@ while(Perform.Another.Simulation=="yes")
                                           ,Boulders$Best_estimate[i]
                                           ,Boulders$Upper_bound[i]
                                           ,paste0("#Boulders ",Boulders[i,1],"m")),
-          monoton = "decr")
+          monoton = if(PositiveOutputMonotony){"decr"}else{"incr"})
       }
     }
     
@@ -484,7 +503,7 @@ while(Perform.Another.Simulation=="yes")
     input=CREATE_DISTR(input)
     
     ####VISU INPUT
-    png(paste0("2Outputs/Pbox/ReleasedVolume_Evt-",Event.name,"_Nrun_",N.Runs,"_InputDistributions.png"), width = 22, height = 18,units="cm",res=350)
+    png(paste0("2Outputs/Pbox/InputDistributions_Evt-",Event.name,"_Nrun_",N.Runs,".png"), width = 22, height = 18,units="cm",res=350)
     {PLOT_INPUTnew(input)}
     dev.off()
     
@@ -495,40 +514,120 @@ while(Perform.Another.Simulation=="yes")
     #Hybrid uncertainty propagation on released volume----
     ###HYBRID UNCERTAINTY PROPAGATION
     
-    Rslt_Uncertain.Boulder.Number<-PROPAG(N=N.Runs,input
-                                          ,CheekyeBufferingModel_UncertainBoulderNumber_Vtot
-                                          ,choice_opt,param_opt,mode="IRS")
-    Rslt_Uncertain.Boulder.Number<-data.frame(P=seq(0,1,length.out = N.Runs)
-                                              ,Min=sort(Rslt_Uncertain.Boulder.Number[1,])/10^3
-                                              ,Max=sort(Rslt_Uncertain.Boulder.Number[2,])/10^3)
-    #       
-    ###################Plot Pbox----
-    #       
-    ggplot()+theme_bw(base_size = 9)+
-      geom_vline(aes(xintercept = 1))+
-      geom_vline(aes(xintercept = 0))+
-      geom_hline(aes(yintercept=Events$Volume_min[Magnitude.class]/10^3),lty=2)+
-      geom_hline(aes(yintercept=Events$Volume_BestEstimate[Magnitude.class]/10^3))+
-      geom_hline(aes(yintercept=Events$Volume_max[Magnitude.class]/10^3),lty=2)+
-      annotate(geom = "text", x = 0.5, y = Events$Volume_BestEstimate[Magnitude.class]/10^3
-               ,vjust=(-0.5), label = "Supply (Best. Est.)",srt=90)+
-      geom_ribbon(data=Rslt_Uncertain.Boulder.Number,aes(x =P,ymin=Min,ymax=Max),alpha=0.3,lwd=1)+
-      geom_line(data=Rslt_Uncertain.Boulder.Number,aes(y =Min ,x=P,colour="1"),lwd=1)+
-      geom_line(data=Rslt_Uncertain.Boulder.Number,aes(y =Max ,x=P,colour="2"),lwd=1)+
-      scale_colour_manual(name="Bounding Cumulated Distribution Functions (CDF)"
-                          ,values=c("lightblue","darkblue")
-                          ,labels=c("Lower bound","Upper bound"))+
-      coord_flip()+ #To have Probability as Y
-      theme(legend.position = "top")+
-      labs( y = "Released volume [1000m3]",x = "Cumulative distribution function"
-            ,caption=paste("Code of",Model," used on", lubridate::today(),"| Number of runs N =",N.Runs)
-            ,title = paste("Uncertainty analysis of released volume for event:",Event.name))
+    #Analysis if parameter is the volume
+    if(ParameterToStudy==1){
+      Rslt_Uncertain.Boulder.Number<-PROPAG(N=N.Runs,input
+                                            ,CheekyeBufferingModel_UncertainBoulderNumber_Vtot
+                                            ,choice_opt,param_opt,mode="IRS")
+      Rslt_Uncertain.Boulder.Number<-data.frame(P=seq(0,1,length.out = N.Runs)
+                                                ,Min=sort(Rslt_Uncertain.Boulder.Number[1,])/10^3
+                                                ,Max=sort(Rslt_Uncertain.Boulder.Number[2,])/10^3)
+      #       
+      ###################Plot Pbox----
+      #       
+      ggplot()+theme_bw(base_size = 9)+
+        geom_vline(aes(xintercept = 1))+
+        geom_vline(aes(xintercept = 0))+
+        geom_hline(aes(yintercept=Events$Volume_min[Magnitude.class]/10^3),lty=2)+
+        geom_hline(aes(yintercept=Events$Volume_BestEstimate[Magnitude.class]/10^3))+
+        geom_hline(aes(yintercept=Events$Volume_max[Magnitude.class]/10^3),lty=2)+
+        annotate(geom = "text", x = 0.5, y = Events$Volume_BestEstimate[Magnitude.class]/10^3
+                 ,vjust=(-0.5), label = "Supply (Best. Est.)",srt=90)+
+        geom_ribbon(data=Rslt_Uncertain.Boulder.Number,aes(x =P,ymin=Min,ymax=Max),alpha=0.3,lwd=1)+
+        geom_line(data=Rslt_Uncertain.Boulder.Number,aes(y =Min ,x=P,colour="1"),lwd=1)+
+        geom_line(data=Rslt_Uncertain.Boulder.Number,aes(y =Max ,x=P,colour="2"),lwd=1)+
+        scale_colour_manual(name="Bounding Cumulated Distribution Functions (CDF)"
+                            ,values=c("lightblue","darkblue")
+                            ,labels=c("Lower bound","Upper bound"))+
+        coord_flip()+ #To have Probability as Y
+        theme(legend.position = "top")+
+        labs( y = "Released volume [1000m3]",x = "Cumulative distribution function"
+              ,caption=paste("Code of",Model," used on", lubridate::today(),"| Number of runs N =",N.Runs)
+              ,title = paste("Uncertainty analysis of released volume for event:",Event.name))
+      
+    }
+    
+    #Analysis if the parameter is the peak discharge
+    if(ParameterToStudy==2){
+      Rslt_Uncertain.Boulder.Number<-PROPAG(N=N.Runs,input
+                                            ,CheekyeBufferingModel_UncertainBoulderNumber_Qp.out
+                                            ,choice_opt,param_opt,mode="IRS")
+      
+      Rslt_Uncertain.Boulder.Number<-data.frame(P=seq(0,1,length.out = N.Runs)
+                                                ,Min=sort(Rslt_Uncertain.Boulder.Number[1,])
+                                                ,Max=sort(Rslt_Uncertain.Boulder.Number[2,]))
+      #       
+      ###################Plot Pbox----
+      #       
+      ggplot()+theme_bw(base_size = 9)+
+        geom_vline(aes(xintercept = 1))+
+        geom_vline(aes(xintercept = 0))+
+        geom_hline(aes(yintercept=Events$PeakDischarge_min[Magnitude.class]),lty=2)+
+        geom_hline(aes(yintercept=Events$PeakDischarge_BestEstimate[Magnitude.class]))+
+        geom_hline(aes(yintercept=Events$PeakDischarge_max[Magnitude.class]),lty=2)+
+        annotate(geom = "text", x = 0.5, y = Events$PeakDischarge_BestEstimate[Magnitude.class]
+                 ,vjust=(-0.5), label = "Supply (Best. Est.)",srt=90)+
+        geom_ribbon(data=Rslt_Uncertain.Boulder.Number,aes(x =P,ymin=Min,ymax=Max),alpha=0.3,lwd=1)+
+        geom_line(data=Rslt_Uncertain.Boulder.Number,aes(y =Min ,x=P,colour="1"),lwd=1)+
+        geom_line(data=Rslt_Uncertain.Boulder.Number,aes(y =Max ,x=P,colour="2"),lwd=1)+
+        scale_colour_manual(name="Bounding Cumulated Distribution Functions (CDF)"
+                            ,values=c("lightblue","darkblue")
+                            ,labels=c("Lower bound","Upper bound"))+
+        coord_flip()+ #To have Probability as Y
+        theme(legend.position = "top")+
+        labs( y = "Released peak discharge [m3/s]",x = "Cumulative distribution function"
+              ,caption=paste("Code of",Model," used on", lubridate::today(),"| Number of runs N =",N.Runs)
+              ,title = paste("Uncertainty analysis of released peak discharge for event:",Event.name))
+      
+    }
+    
+    #Analysis if the parameter is the maximum level
+    if(ParameterToStudy==3){
+      Rslt_Uncertain.Boulder.Number<-PROPAG(N=N.Runs,input
+                                            ,CheekyeBufferingModel_UncertainBoulderNumber_Z
+                                            ,choice_opt,param_opt,mode="IRS")
+      
+      Rslt_Uncertain.Boulder.Number<-data.frame(P=seq(0,1,length.out = N.Runs)
+                                                ,Min=sort(Rslt_Uncertain.Boulder.Number[1,])
+                                                ,Max=sort(Rslt_Uncertain.Boulder.Number[2,]))
+      #       
+      ###################Plot Pbox----
+      #       
+      ggplot()+theme_bw(base_size = 9)+
+        geom_vline(aes(xintercept = 1))+
+        geom_vline(aes(xintercept = 0))+
+        
+        geom_hline(aes(yintercept=max(Opening$Base.Level)))+
+        annotate(geom = "text", x = 0.5, y = max(Opening$Base.Level)
+                 ,vjust=(-0.5), label = "Crest",srt=90)+
+        geom_hline(aes(yintercept=SpillwayLevel<-Opening$Base.Level[which(Opening$Comment=="Spillway")]))+
+        annotate(geom = "text", x = 0.5, y = SpillwayLevel<-Opening$Base.Level[which(Opening$Comment=="Spillway")]
+                 ,vjust=(-0.5), label = "Spillway",srt=90)+
+        geom_hline(aes(yintercept=min(Opening$Base.Level)),lty=2)+
+        annotate(geom = "text", x = 0.5, y = min(Opening$Base.Level)
+                 ,vjust=(-0.5), label = "Outlet base",srt=90)+
+  
+        geom_ribbon(data=Rslt_Uncertain.Boulder.Number,aes(x =P,ymin=Min,ymax=Max),alpha=0.3,lwd=1)+
+        geom_line(data=Rslt_Uncertain.Boulder.Number,aes(y =Min ,x=P,colour="1"),lwd=1)+
+        geom_line(data=Rslt_Uncertain.Boulder.Number,aes(y =Max ,x=P,colour="2"),lwd=1)+
+        scale_colour_manual(name="Bounding Cumulated Distribution Functions (CDF)"
+                            ,values=c("lightblue","darkblue")
+                            ,labels=c("Lower bound","Upper bound"))+
+        coord_flip()+ #To have Probability as Y
+        theme(legend.position = "top")+
+        labs( y = "Maximum level at the barrier [m]",x = "Cumulative distribution function"
+              ,caption=paste("Code of",Model," used on", lubridate::today(),"| Number of runs N =",N.Runs)
+              ,title = paste("Uncertainty analysis of maximum level at the barrier for event:",Event.name))
+      
+    }
+    # Opening$Base.Level[(length(Opening$Number) -1)]
+   
     #Save figure
-    ggsave(paste0("2Outputs/Pbox/ReleasedVolume_EvtClass",Magnitude.class,"_Nrun_",N.Runs,"_NboulderUncertain.png")
+    ggsave(paste0("2Outputs/Pbox/",AvailableParameters$Parameters[ParameterToStudy],"_EvtClass",Magnitude.class,"_Nrun_",N.Runs,"_NboulderUncertain.png")
            , width = 16.5, height = 7,units="cm")
     
     #Save results
-    save(Rslt_Uncertain.Boulder.Number,file=paste0("2Outputs/Rdata/ReleasedVolume_Evt-",Event.name,"_Nrun_",N.Runs,"_NboulderUncertain.RData"))
+    save(Rslt_Uncertain.Boulder.Number,file=paste0("2Outputs/Rdata/",AvailableParameters[ParameterToStudy],"_Evt-",Event.name,"_Nrun_",N.Runs,"_NboulderUncertain.RData"))
   }
   
   #Want to perform another run
