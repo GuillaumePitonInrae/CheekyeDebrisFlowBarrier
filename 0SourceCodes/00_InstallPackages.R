@@ -2,6 +2,8 @@
 #It installs the used packages and record where are stored the source codes
 ## last update: Sept 19 2023
 
+
+
 # install packages
 install.packages("lubridate") #To add date on plot
 install.packages("stringr") #To replace string
@@ -28,16 +30,17 @@ library(svDialogs) #Package for popup dialog windows
 dlg_message(message="Please select the archive we just downloaded to get the kerdiest package (file kerdiest_1.2.tar.gz)"
             , type = c("ok"));DownloadedPackage<-dlg_open(default = "	kerdiest_1.2.tar.gz",
                                                           title = "Please select the archive we just downloaded to get the kerdiest package (file kerdiest_1.2.tar.gz)")$res
-install.packages(DownloadedPackage, repos = NULL, type = "source")#Package uncertainty propagation
+install.packages(DownloadedPackage, repos = NULL, type = "source")
 
 
 dlg_message(message="Please select the archive we just downloaded to get the reliaR package (file reliaR_0.01.tar.gz)"
             , type = c("ok"));DownloadedPackage<-dlg_open(default = "reliaR_0.01.tar.gz",
                                                           title = "Please select the archive we just downloaded to get the kerdiest package (file reliaR_0.01.tar.gz)")$res
-install.packages(DownloadedPackage, repos = NULL, type = "source")#Package uncertainty propagation
+install.packages(DownloadedPackage, repos = NULL, type = "source")
 
 dlg_message(message="Please select the archive we just downloaded to get the Hyrisk package (file HYRISK_1.2.tar.gz)"
             , type = c("ok"));DownloadedPackage<-dlg_open(default = "HYRISK_1.2.tar.gz",
                                                           title = "Show me where was downloaded the Hyrisk package (file HYRISK_1.2.tar.gz)")$res
 
-install.packages(DownloadedPackage, repos = NULL, type = "source")#Package uncertainty propagation
+install.packages(DownloadedPackage, repos = NULL, type = "source")
+
